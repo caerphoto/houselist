@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>House To Do List</title>
+    <link href="https://fonts.googleapis.com/css?family=Muli:400,400i,700" rel="stylesheet">
+    <link rel="stylesheet" href="/static/main.css">
+  </head>
+  <body>
+    <h1>House To Do List</h1>
+
+    <div id="app">
+      <ol class="todo-list">
+        <todo-item
+          v-for="(item, index) in items"
+          :key="item.id"
+          :text="item.text"
+          :cost="item.cost"
+          :index="index"
+          @remove="removeItem(index)"
+          @update-item="updateItem(index, $event)"
+        ></todo-item>
+      </ol>
+
+      <p class="item-total">Total: £<span class="item-total__value"><$ totalCost $></span></p>
+
+      <form @submit.prevent="addNewItem" class="new-item">
+        <h2>New item:</h2>
+        <input class="todo-item__input todo-item__input--text" type="text" v-model="newItemText" ref="newTextInput">
+        <span class="todo-item__currency-label">£</span>
+        <input class="todo-item__input todo-item__input--number" type="number" v-model.number="newItemCost"></label>
+        <button type="submit" class="todo-item__add">Add</button>
+      </form>
+    </div>
+
+    <template id="todo-item">
+      <li class="todo-item" :class="{ 'todo-item--editing': isEditorVisible }">
+        <span class="todo-item__index"><$ index + 1$></span>
+        <span class="todo-item__gripper"></span>
+        <div class="todo-item__display" @click="showEditor">
+          <span class="todo-item__text"><$ text $></span>
+          <span class="todo-item__currency-label">£</span>
+          <span class="todo-item__cost"><$ formattedCost $></span>
+        </div>
+        <form class="todo-item__editor" @submit.prevent="hideAndApply">
+          <input type="text" class="todo-item__input todo-item__input--text" ref="text" v-model="newText">
+          <span class="todo-item__currency-label">£</span>
+          <input type="number" class="todo-item__input todo-item__input--number" ref="cost" v-model.number="newCost">
+          <button type="submit" class="todo-item__update">OK</button>
+        </form>
+        <button type="button" @click="$emit('remove')" class="todo-item__remove">&times;</button>
+      </li>
+    </template>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script>
+      window.initialListData = {{ list_data|safe }}
+    </script>
+    <script src="/static/main.js"></script>
+  </body>
+</html>
+
