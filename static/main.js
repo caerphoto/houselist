@@ -22,7 +22,10 @@ Vue.component('todo-item', {
   props: {
     text: String,
     cost: Number,
-    index: Number
+    index: Number,
+    isDragging: Boolean,
+    isDraggingOver: Boolean,
+    isDraggingOverTop: Boolean
   },
   template: '#todo-item',
   delimiters: ['<$', '$>'],
@@ -51,6 +54,18 @@ Vue.component('todo-item', {
         text: this.newText,
         cost: this.newCost
       });
+    },
+    startDragging: function (event) {
+      this.$emit('start-dragging', event);
+    },
+    doDrag: function (event) {
+      var el = event.currentTarget;
+      var upperHalf;
+      var elRect = el.getBoundingClientRect();
+      var y = event.clientY - elRect.top;
+      if (!el) return;
+      upperHalf = (y / el.offsetHeight) <= 0.5;
+      this.$emit('dragging-over', upperHalf);
     }
   }
 });
@@ -64,7 +79,10 @@ var app = new Vue({
     newItemText: '',
     newItemCost: 0,
     items: [],
-    nextItemId: 0
+    previousItems: [],
+    nextItemId: 0,
+    draggingIndex: -1,
+    draggingOverIndex: -1
   },
   computed: {
     totalCost: function () {
@@ -96,10 +114,16 @@ var app = new Vue({
     },
     removeItem: function (index) {
       this.items.splice(index, 1);
-    }
-  },
-  watch: {
-    items: function () {
+    },
+    getMinimalItems: function () {
+      return this.items.map(function (item) {
+        return {
+          text: item.text,
+          cost: item.cost
+        };
+      });
+    },
+    saveItems: function () {
       var xhr = new XMLHttpRequest();
       var _this = this;
 
@@ -110,15 +134,74 @@ var app = new Vue({
 
       xhr.open('POST', '/save');
       xhr.setRequestHeader('Content-Type', 'application/json');
-      xhr.send(JSON.stringify(this.items));
+      xhr.send(JSON.stringify(this.getMinimalItems()));
+    },
+    startDragging: function (index, event) {
+      this.draggingIndex = index;
+      event.preventDefault();
+    },
+    stopDragging: function (newIndex, top) {
+      var tempItem;
+      var oldIndex = this.draggingIndex;
+
+      if (oldIndex === -1) return;
+
+      if (!top) newIndex += 1;
+      if (newIndex > this.items.length) newIndex -= 1;
+
+      this.items.splice(newIndex, 0, this.items[oldIndex]);
+      if (newIndex > oldIndex) {
+        this.items.splice(oldIndex, 1);
+      } else {
+        this.items.splice(oldIndex + 1, 1);
+      }
+
+      this.draggingIndex = -1;
+    },
+    draggingOver: function (index, upperHalf) {
+      var item = this.items[index];
+      this.draggingOverIndex = index;
+
+      item.draggingTop = upperHalf;
+      this.$set(this.items, index, item);
+    }
+  },
+  watch: {
+    items: function () {
+      var newItems;
+      var previousItems = this.previousItems;
+      var noChange;
+
+      // Only save if important fields have changed.
+      newItems = this.getMinimalItems();
+      noChange = newItems.length === previousItems.length &&
+        newItems.every(function (item, index) {
+          return item.text === previousItems[index].text &&
+            item.cost === previousItems[index].cost;
+        });
+      if (noChange) return;
+      this.saveItems();
+      this.previousItems = newItems;
     }
   },
   beforeMount: function () {
     if (window.initialListData) {
+      var nextItemId = this.nextItemId;
+
+      window.initialListData.forEach(function (item) {
+        nextItemId = Math.max(item.id, nextItemId + 1);
+      }.bind(this));
+
+      this.nextItemId = nextItemId;
+
       [].push.apply(this.items, window.initialListData);
+      this.previousItems = this.getMinimalItems();
     }
   },
   mounted: function () {
     this.$refs.newTextInput.focus();
+    document.addEventListener('mouseup', function () {
+      this.draggingIndex = -1;
+    }.bind(this));
   }
 });

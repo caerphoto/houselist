@@ -2,6 +2,7 @@
 <html>
   <head>
     <title>House To Do List</title>
+    <meta name="viewport" content="width=device-width, maximum-scale=1">
     <link href="https://fonts.googleapis.com/css?family=Muli:400,400i,700" rel="stylesheet">
     <link rel="stylesheet" href="/static/main.css">
   </head>
@@ -9,19 +10,25 @@
     <h1>House To Do List</h1>
 
     <div id="app">
-      <ol class="todo-list">
+      <ol class="todo-list" :class="{ 'todo-list--is-dragging': draggingIndex !== -1 }">
         <todo-item
           v-for="(item, index) in items"
           :key="item.id"
           :text="item.text"
           :cost="item.cost"
           :index="index"
+          :is-dragging="draggingIndex === index"
+          :is-dragging-over="draggingOverIndex === index && draggingIndex !== -1"
+          :is-dragging-over-top="item.draggingTop && draggingIndex !== -1"
           @remove="removeItem(index)"
           @update-item="updateItem(index, $event)"
+          @start-dragging="startDragging(index, $event)"
+          @dragging-over="draggingOver(index, $event)"
+          @stop-dragging="stopDragging(index, item.draggingTop)"
         ></todo-item>
       </ol>
 
-      <p class="item-total">Total: £<span class="item-total__value"><$ totalCost $></span></p>
+      <p class="item-total"><span class="item-total__value">£<$ totalCost $></span></p>
 
       <form @submit.prevent="addNewItem" class="new-item">
         <h2>New item:</h2>
@@ -33,9 +40,18 @@
     </div>
 
     <template id="todo-item">
-      <li class="todo-item" :class="{ 'todo-item--editing': isEditorVisible }">
-        <span class="todo-item__index"><$ index + 1$></span>
-        <span class="todo-item__gripper"></span>
+      <li class="todo-item"
+        :class="{
+          'todo-item--editing': isEditorVisible,
+          'todo-item--dragging': isDragging,
+          'todo-item--dragging-over': isDraggingOver,
+          'todo-item--dragging-over-top': isDraggingOverTop
+          }"
+        @mousemove="doDrag"
+        @mouseup="$emit('stop-dragging', index)"
+      >
+      <span class="todo-item__index"><$ index + 1$></span>
+        <span class="todo-item__gripper" @mousedown="startDragging"></span>
         <div class="todo-item__display" @click="showEditor">
           <span class="todo-item__text"><$ text $></span>
           <span class="todo-item__currency-label">£</span>
