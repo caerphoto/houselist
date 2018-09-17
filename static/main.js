@@ -41,6 +41,10 @@ Vue.component('todo-item', {
       return formatNumber(this.cost);
     }
   },
+  watch: {
+    text: function () { this.newText = this.text; },
+    cost: function () { this.newCost = this.cost; }
+  },
   methods: {
     showEditor: function () {
       this.isEditorVisible = true;
@@ -141,7 +145,6 @@ var app = new Vue({
       event.preventDefault();
     },
     stopDragging: function (newIndex, top) {
-      var tempItem;
       var oldIndex = this.draggingIndex;
 
       if (oldIndex === -1) return;
